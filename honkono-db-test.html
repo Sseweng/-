@@ -36,7 +36,14 @@ button{width:100%;margin-top:18px;padding:14px;border:0;border-radius:13px;backg
 </form>
 <div id="saveMsg" style="margin-top:12px"></div>
 </div>
-<h2 style="font-size:19px;margin:25px 0 8px">저장된 곡</h2>
+<h2 style="font-size:19px;margin:25px 0 10px">저장된 곡</h2>
+<input id="search" placeholder="🔎 제목 또는 가수 검색" style="margin-bottom:12px">
+<div id="tabs" style="display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-bottom:12px">
+<button type="button" data-tab="all" style="margin:0;padding:10px 5px;font-size:13px">전체</button>
+<button type="button" data-tab="good" style="margin:0;padding:10px 5px;font-size:13px">🟢 자신</button>
+<button type="button" data-tab="maybe" style="margin:0;padding:10px 5px;font-size:13px">🟡 애매</button>
+<button type="button" data-tab="ban" style="margin:0;padding:10px 5px;font-size:13px">🔴 금지</button>
+</div>
 <div id="songs"><p>불러오는 중...</p></div></section>
 </div></div>
 <script>
@@ -50,27 +57,51 @@ const clearSession=()=>localStorage.removeItem("honkono_session");
 function showLogin(){ $("#app").style.display="none";$("#login").style.display="block" }
 async function showApp(s){ $("#login").style.display="none";$("#app").style.display="block";$("#who").textContent="쓰웽이"; await loadSongs(s) }
 
+let allSongs=[], currentTab="all";
+
+function renderSongs(){
+ const box=$("#songs");
+ const q=($("#search")?.value||"").trim().toLowerCase();
+ const rows=allSongs.filter(x=>{
+  const tabOK=currentTab==="all"||x.status===currentTab;
+  const searchOK=!q||(x.title||"").toLowerCase().includes(q)||(x.artist||"").toLowerCase().includes(q);
+  return tabOK&&searchOK;
+ });
+ if(!rows.length){box.innerHTML="<p>조건에 맞는 곡이 없습니다.</p>";return}
+ const names={good:"🟢 자신 있음",maybe:"🟡 애매함",ban:"🔴 금지곡"};
+ box.innerHTML="";
+ rows.forEach(x=>{
+  const d=document.createElement("div");d.className="song";
+  const b=document.createElement("b");b.textContent=x.title||"(제목 없음)";
+  const m=document.createElement("div");m.className="meta";m.textContent=x.artist||"(가수 없음)";
+  const st=document.createElement("div");st.className="status";st.textContent=names[x.status]||x.status||"상태 없음";
+  const memo=document.createElement("div");memo.className="memo";memo.textContent=x.memo||"";
+  d.append(b,m,st);if(x.memo)d.append(memo);
+  const actions=document.createElement("div");actions.style.cssText="display:flex;gap:8px;margin-top:14px";
+  const edit=document.createElement("button");edit.type="button";edit.textContent="수정";edit.style.cssText="width:auto;margin:0;padding:8px 12px;background:#eef0f5;color:#242936;font-size:13px";
+  const del=document.createElement("button");del.type="button";del.textContent="삭제";del.style.cssText="width:auto;margin:0;padding:8px 12px;background:#fff0f0;color:#a52a2a;font-size:13px";
+  edit.onclick=()=>editSong(x);del.onclick=()=>deleteSong(x);
+  actions.append(edit,del);d.append(actions);box.append(d);
+ });
+}
+
 async function loadSongs(s){
- const box=$("#songs"); box.innerHTML="<p>Supabase에서 불러오는 중...</p>";
+ const box=$("#songs");box.innerHTML="<p>Supabase에서 불러오는 중...</p>";
  try{
-  const r=await fetch(URL+"/rest/v1/songs?select=id,created_at,title,artist,status,memo&order=created_at.desc",{
-   headers:{apikey:KEY,Authorization:"Bearer "+s.access_token}
-  });
+  const r=await fetch(URL+"/rest/v1/songs?select=id,created_at,title,artist,status,memo&order=created_at.desc",{headers:{apikey:KEY,Authorization:"Bearer "+s.access_token}});
   if(!r.ok){const t=await r.text();throw Error("DB 불러오기 실패 ("+r.status+"): "+t)}
-  const rows=await r.json();
-  if(!rows.length){box.innerHTML="<p>저장된 곡이 아직 없습니다.</p>";return}
-  const names={good:"🟢 자신 있음",maybe:"🟡 애매함",ban:"🔴 금지곡"};
-  box.innerHTML="";
-  rows.forEach(x=>{
-   const d=document.createElement("div");d.className="song";
-   const b=document.createElement("b");b.textContent=x.title||"(제목 없음)";
-   const m=document.createElement("div");m.className="meta";m.textContent=x.artist||"(가수 없음)";
-   const st=document.createElement("div");st.className="status";st.textContent=names[x.status]||x.status||"상태 없음";
-   const memo=document.createElement("div");memo.className="memo";memo.textContent=x.memo||"";
-   d.append(b,m,st); if(x.memo)d.append(memo); box.append(d);
-  });
+  allSongs=await r.json();renderSongs();
  }catch(e){box.innerHTML="";const p=document.createElement("p");p.style.color="#a52a2a";p.textContent=e.message;box.append(p)}
 }
+
+$("#search").addEventListener("input",renderSongs);
+document.querySelectorAll("#tabs button").forEach(b=>b.onclick=()=>{
+ currentTab=b.dataset.tab;
+ document.querySelectorAll("#tabs button").forEach(x=>{x.style.background="#eef0f5";x.style.color="#242936"});
+ b.style.background="#171923";b.style.color="white";
+ renderSongs();
+});
+document.querySelector('#tabs button[data-tab="all"]').click();
 
 $("#form").onsubmit=async e=>{
  e.preventDefault();$("#msg").textContent="";$("#btn").disabled=true;$("#btn").textContent="로그인 중...";
@@ -81,6 +112,37 @@ $("#form").onsubmit=async e=>{
   saveSession(d);$("#form").reset();await showApp(d);
  }catch(e){$("#msg").textContent=e.message}finally{$("#btn").disabled=false;$("#btn").textContent="로그인"}
 };
+
+
+async function editSong(x){
+ const title=prompt("곡 제목",x.title||""); if(title===null)return;
+ const artist=prompt("가수",x.artist||""); if(artist===null)return;
+ const status=prompt("상태를 입력하세요: good / maybe / ban",x.status||"good"); if(status===null)return;
+ if(!["good","maybe","ban"].includes(status)){alert("상태는 good, maybe, ban 중 하나만 입력해줘.");return}
+ const memo=prompt("메모",x.memo||""); if(memo===null)return;
+ const s=loadSession();
+ try{
+  const r=await fetch(URL+"/rest/v1/songs?id=eq."+encodeURIComponent(x.id),{
+   method:"PATCH",
+   headers:{apikey:KEY,Authorization:"Bearer "+s.access_token,"Content-Type":"application/json"},
+   body:JSON.stringify({title:title.trim(),artist:artist.trim(),status,memo:memo.trim()})
+  });
+  if(!r.ok){const t=await r.text();throw Error("수정 실패 ("+r.status+"): "+t)}
+  await loadSongs(s);
+ }catch(e){alert(e.message)}
+}
+
+async function deleteSong(x){
+ if(!confirm("「"+(x.title||"이 곡")+"」을 정말 삭제할까?"))return;
+ const s=loadSession();
+ try{
+  const r=await fetch(URL+"/rest/v1/songs?id=eq."+encodeURIComponent(x.id),{
+   method:"DELETE",headers:{apikey:KEY,Authorization:"Bearer "+s.access_token}
+  });
+  if(!r.ok){const t=await r.text();throw Error("삭제 실패 ("+r.status+"): "+t)}
+  await loadSongs(s);
+ }catch(e){alert(e.message)}
+}
 
 $("#songForm").onsubmit=async e=>{
  e.preventDefault();
