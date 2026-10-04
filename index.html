@@ -24,6 +24,9 @@
     .card.game::after { background:rgba(72,174,126,.075); }
     .icon { display:grid; place-items:center; width:58px; height:58px; margin-bottom:24px; border-radius:18px; background:#f2f5fa; font-size:29px; }
     .game .icon { background:#eef8f1; }
+    .karaoke::after { background:rgba(205,91,151,.075); }
+    .karaoke .icon { background:#fff0f7; }
+    .karaoke .open { color:#b94f88; }
     .card h2 { margin:0 0 10px; font-size:23px; letter-spacing:-.035em; }
     .card p { margin:0; max-width:410px; color:var(--muted); line-height:1.65; font-size:14px; }
     .open { position:absolute; left:30px; bottom:28px; z-index:1; display:inline-block; font-size:14px; font-weight:800; color:var(--blue); }
@@ -74,6 +77,13 @@
         <h2>모동숲 가방 도우미</h2>
         <p>잡은 생물을 빠르게 검색하고 판매가를 비교해, 가방에 무엇을 남길지 쉽게 결정합니다.</p>
         <span class="open">도우미 열기 →</span>
+      </a>
+
+      <a class="card karaoke" href="honkono-song-note.html">
+        <div class="icon" aria-hidden="true">🎤</div>
+        <h2>혼코노 도전곡 노트</h2>
+        <p>쓰웽이만 쓰는 개인 혼코노 기록장. 불러본 곡을 자신 있음·애매함·금지곡으로 나눠 기록하고 확인합니다.</p>
+        <span class="open">기록장 열기 →</span>
       </a>
     </section>
 

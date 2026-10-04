@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>혼코노 DB 연결 테스트</title>
+<style>
+*{box-sizing:border-box}
+:root{--ink:#171923;--muted:#6d7484;--line:#e7e9ef;--bg:#f5f6fa;--soft:#f0f2f7;--green:#22865d;--yellow:#9a6b00;--red:#c34747}
+body{margin:0;min-height:100vh;background:var(--bg);font-family:system-ui,-apple-system,"Noto Sans KR",sans-serif;color:var(--ink);padding:18px}
+.wrap{width:min(100%,640px);margin:24px auto 60px}
+.card{background:#fff;border:1px solid var(--line);border-radius:26px;padding:26px;box-shadow:0 14px 44px #14182812}
+h1{font-size:27px;margin:0 0 7px;letter-spacing:-.04em} h2{letter-spacing:-.03em}
+p{color:var(--muted);line-height:1.55}
+label{display:block;font-size:13px;font-weight:800;margin:14px 0 7px}
+input,select{width:100%;padding:14px;border:1px solid #d9dde7;border-radius:13px;font-size:16px;background:#fff;color:var(--ink);outline:none}
+input:focus,select:focus{border-color:#8d96a8;box-shadow:0 0 0 3px #1719230b}
+button{border:0;border-radius:13px;font-weight:800;cursor:pointer}
+#form button,#songForm>button{width:100%;margin-top:18px;padding:14px;background:var(--ink);color:#fff;font-size:16px}
+#app{display:none}
+.top{display:flex;justify-content:space-between;gap:12px;align-items:center}
+.top button{padding:9px 12px;background:#eef0f5;color:#242936;font-size:13px}
+.editor{margin-top:22px;padding-top:20px;border-top:1px solid var(--line)}
+.editor-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.editor-head h2{font-size:19px;margin:0}
+.editing-badge{display:none;padding:6px 9px;border-radius:999px;background:#fff3d7;color:#855d00;font-size:12px;font-weight:900}
+.form-actions{display:flex;gap:8px}
+.form-actions button{flex:1}
+#cancelEdit{display:none;background:#eef0f5!important;color:#242936!important}
+#saveMsg{margin-top:12px;min-height:22px}
+.list-head{display:flex;justify-content:space-between;align-items:end;gap:12px;margin-top:28px}
+.list-head h2{font-size:19px;margin:0}
+#totalCount{color:var(--muted);font-size:13px;font-weight:800}
+.search-wrap{position:sticky;top:8px;z-index:5;background:#fff;padding:12px 0 10px}
+#search{background:#fafbfc}
+#tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
+.tab{margin:0;padding:10px 5px;background:#eef0f5;color:#343947;font-size:12px}
+.tab.active{background:var(--ink);color:#fff}
+.song{border:1px solid var(--line);border-radius:18px;padding:17px;margin-top:12px;background:#fff}
+.song-main{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+.song b{display:block;font-size:18px;letter-spacing:-.02em}
+.meta{margin-top:4px;color:var(--muted);font-size:14px}
+.memo{margin-top:11px;padding:10px 12px;border-radius:11px;background:#f7f8fa;color:#424857;font-size:14px;line-height:1.5}
+.status{display:inline-block;white-space:nowrap;padding:6px 9px;border-radius:999px;font-size:12px;font-weight:900}
+.status.good{background:#eaf7f0;color:var(--green)}
+.status.maybe{background:#fff5d9;color:var(--yellow)}
+.status.ban{background:#fff0f0;color:var(--red)}
+.actions{display:flex;gap:7px;margin-top:13px}
+.actions button{width:auto;margin:0;padding:8px 12px;font-size:13px}
+.edit-btn{background:#eef0f5;color:#242936}
+.delete-btn{background:#fff0f0;color:#a52a2a}
+.empty{padding:28px 8px;text-align:center;color:var(--muted)}
+#msg{margin-top:13px;color:#a52a2a}
+@media(max-width:520px){
+ body{padding:10px}.wrap{margin:10px auto 36px}.card{padding:20px;border-radius:22px}
+ h1{font-size:25px}.song-main{display:block}.status{margin-top:10px}
+ .tab{font-size:11px;padding:10px 2px}.search-wrap{top:0}
+}
+</style>
+</head>
+<body><div class="wrap"><div class="card">
+<section id="login"><h1>🎤 혼코노 도전곡 노트</h1><p>로그인하고 Supabase의 songs 장부를 불러와보자.</p>
+<form id="form"><label>이메일</label><input id="email" type="email" autocomplete="username" required>
+<label>비밀번호</label><input id="password" type="password" autocomplete="current-password" required>
+<button id="btn">로그인</button></form><div id="msg"></div></section>
+
+<section id="app">
+<div class="top">
+  <div><h1>🎤 혼코노 도전곡 노트</h1><p id="who" style="margin:3px 0 0">쓰웽이 전용 기록장</p></div>
+  <button id="logout">로그아웃</button>
+</div>
+
+<div class="editor" id="editor">
+  <div class="editor-head">
+    <h2 id="editorTitle">새 도전곡 추가</h2>
+    <span class="editing-badge" id="editingBadge">수정 중</span>
+  </div>
+  <form id="songForm">
+    <label>곡 제목</label><input id="songTitle" required placeholder="예: 겁쟁이">
+    <label>가수</label><input id="songArtist" required placeholder="예: 버즈">
+    <label>상태</label>
+    <select id="songStatus">
+      <option value="good">🟢 자신 있음</option>
+      <option value="maybe">🟡 애매함</option>
+      <option value="ban">🔴 금지곡</option>
+    </select>
+    <label>메모</label><input id="songMemo" placeholder="예: 후렴 고음 주의 / 컨디션 좋을 때 가능">
+    <div class="form-actions">
+      <button id="saveSongBtn" type="submit">곡 저장하기</button>
+      <button id="cancelEdit" type="button">수정 취소</button>
+    </div>
+  </form>
+  <div id="saveMsg"></div>
+</div>
+
+<div class="list-head">
+  <h2>저장된 곡</h2>
+  <span id="totalCount"></span>
+</div>
+<div class="search-wrap">
+  <input id="search" placeholder="🔎 제목 또는 가수 검색">
+  <div id="tabs" style="margin-top:10px">
+    <button class="tab active" type="button" data-tab="all">전체 <span data-count="all">0</span></button>
+    <button class="tab" type="button" data-tab="good">🟢 자신 <span data-count="good">0</span></button>
+    <button class="tab" type="button" data-tab="maybe">🟡 애매 <span data-count="maybe">0</span></button>
+    <button class="tab" type="button" data-tab="ban">🔴 금지 <span data-count="ban">0</span></button>
+  </div>
+</div>
+<div id="songs"><p class="empty">불러오는 중...</p></div>
+</section>
+</div></div>
+<script>
+const URL="https://nirggbfyavvbeaikjhvn.supabase.co";
+const KEY="sb_publishable_D-tRymcuBoMq3i63nAyRIg_WNkQgLD_";
+const $=s=>document.querySelector(s);
+const loadSession=()=>{try{return JSON.parse(localStorage.getItem("honkono_session")||"null")}catch{return null}};
+const saveSession=s=>localStorage.setItem("honkono_session",JSON.stringify(s));
+const clearSession=()=>localStorage.removeItem("honkono_session");
+const statusNames={good:"🟢 자신 있음",maybe:"🟡 애매함",ban:"🔴 금지곡"};
+
+let allSongs=[], currentTab="all", editingId=null;
+
+function showLogin(){ $("#app").style.display="none";$("#login").style.display="block" }
+async function showApp(s){ $("#login").style.display="none";$("#app").style.display="block"; await loadSongs(s) }
+
+function updateCounts(){
+ const counts={
+  all:allSongs.length,
+  good:allSongs.filter(x=>x.status==="good").length,
+  maybe:allSongs.filter(x=>x.status==="maybe").length,
+  ban:allSongs.filter(x=>x.status==="ban").length
+ };
+ Object.entries(counts).forEach(([k,v])=>{const el=document.querySelector(`[data-count="${k}"]`);if(el)el.textContent=v});
+ $("#totalCount").textContent=`총 ${allSongs.length}곡`;
+}
+
+function renderSongs(){
+ updateCounts();
+ const box=$("#songs");
+ const q=$("#search").value.trim().toLowerCase();
+ const rows=allSongs.filter(x=>{
+  const tabOK=currentTab==="all"||x.status===currentTab;
+  const searchOK=!q||(x.title||"").toLowerCase().includes(q)||(x.artist||"").toLowerCase().includes(q);
+  return tabOK&&searchOK;
+ });
+ box.innerHTML="";
+ if(!rows.length){
+  const p=document.createElement("p");p.className="empty";
+  p.textContent=q?"검색 결과가 없습니다.":"이 탭에는 아직 저장된 곡이 없습니다.";
+  box.append(p);return;
+ }
+ rows.forEach(x=>{
+  const d=document.createElement("article");d.className="song";
+  const main=document.createElement("div");main.className="song-main";
+  const info=document.createElement("div");
+  const title=document.createElement("b");title.textContent=x.title||"(제목 없음)";
+  const artist=document.createElement("div");artist.className="meta";artist.textContent=x.artist||"(가수 없음)";
+  info.append(title,artist);
+  const st=document.createElement("span");st.className=`status ${x.status||""}`;st.textContent=statusNames[x.status]||x.status||"상태 없음";
+  main.append(info,st);d.append(main);
+  if(x.memo){const memo=document.createElement("div");memo.className="memo";memo.textContent=x.memo;d.append(memo)}
+  const actions=document.createElement("div");actions.className="actions";
+  const edit=document.createElement("button");edit.type="button";edit.className="edit-btn";edit.textContent="수정";
+  const del=document.createElement("button");del.type="button";del.className="delete-btn";del.textContent="삭제";
+  edit.onclick=()=>startEdit(x);del.onclick=()=>deleteSong(x);
+  actions.append(edit,del);d.append(actions);box.append(d);
+ });
+}
+
+async function loadSongs(s){
+ const box=$("#songs");box.innerHTML='<p class="empty">Supabase에서 불러오는 중...</p>';
+ try{
+  const r=await fetch(URL+"/rest/v1/songs?select=id,created_at,title,artist,status,memo&order=created_at.desc",{headers:{apikey:KEY,Authorization:"Bearer "+s.access_token}});
+  if(!r.ok){const t=await r.text();throw Error("DB 불러오기 실패 ("+r.status+"): "+t)}
+  allSongs=await r.json();renderSongs();
+ }catch(e){box.innerHTML="";const p=document.createElement("p");p.className="empty";p.style.color="#a52a2a";p.textContent=e.message;box.append(p)}
+}
+
+function startEdit(x){
+ editingId=x.id;
+ $("#songTitle").value=x.title||"";
+ $("#songArtist").value=x.artist||"";
+ $("#songStatus").value=x.status||"good";
+ $("#songMemo").value=x.memo||"";
+ $("#editorTitle").textContent="도전곡 수정";
+ $("#editingBadge").style.display="inline-block";
+ $("#saveSongBtn").textContent="수정 완료";
+ $("#cancelEdit").style.display="block";
+ $("#saveMsg").textContent="";
+ $("#editor").scrollIntoView({behavior:"smooth",block:"start"});
+ setTimeout(()=>$("#songTitle").focus(),250);
+}
+
+function cancelEdit(){
+ editingId=null;
+ $("#songForm").reset();
+ $("#editorTitle").textContent="새 도전곡 추가";
+ $("#editingBadge").style.display="none";
+ $("#saveSongBtn").textContent="곡 저장하기";
+ $("#cancelEdit").style.display="none";
+ $("#saveMsg").textContent="";
+}
+
+async function deleteSong(x){
+ if(!confirm(`「${x.title||"이 곡"}」을 정말 삭제할까?`))return;
+ const s=loadSession();
+ try{
+  const r=await fetch(URL+"/rest/v1/songs?id=eq."+encodeURIComponent(x.id),{
+   method:"DELETE",headers:{apikey:KEY,Authorization:"Bearer "+s.access_token}
+  });
+  if(!r.ok){const t=await r.text();throw Error("삭제 실패 ("+r.status+"): "+t)}
+  if(editingId===x.id)cancelEdit();
+  await loadSongs(s);
+ }catch(e){alert(e.message)}
+}
+
+$("#search").addEventListener("input",renderSongs);
+document.querySelectorAll("#tabs .tab").forEach(b=>b.onclick=()=>{
+ currentTab=b.dataset.tab;
+ document.querySelectorAll("#tabs .tab").forEach(x=>x.classList.toggle("active",x===b));
+ renderSongs();
+});
+$("#cancelEdit").onclick=cancelEdit;
+
+$("#form").onsubmit=async e=>{
+ e.preventDefault();$("#msg").textContent="";$("#btn").disabled=true;$("#btn").textContent="로그인 중...";
+ try{
+  const r=await fetch(URL+"/auth/v1/token?grant_type=password",{method:"POST",headers:{apikey:KEY,"Content-Type":"application/json"},
+   body:JSON.stringify({email:$("#email").value.trim(),password:$("#password").value})});
+  const d=await r.json();if(!r.ok)throw Error(d.msg||d.message||"로그인 실패");
+  saveSession(d);$("#form").reset();await showApp(d);
+ }catch(e){$("#msg").textContent=e.message}finally{$("#btn").disabled=false;$("#btn").textContent="로그인"}
+};
+
+$("#songForm").onsubmit=async e=>{
+ e.preventDefault();
+ const s=loadSession(), out=$("#saveMsg"), btn=$("#saveSongBtn");
+ out.textContent=editingId===null?"저장 중...":"수정 중...";
+ out.style.color="#687083";btn.disabled=true;
+ try{
+  if(!s?.access_token)throw Error("로그인이 필요합니다.");
+  const row={
+   title:$("#songTitle").value.trim(),
+   artist:$("#songArtist").value.trim(),
+   status:$("#songStatus").value,
+   memo:$("#songMemo").value.trim()
+  };
+  if(!row.title||!row.artist)throw Error("곡 제목과 가수를 입력해줘.");
+  const isEdit=editingId!==null;
+  const endpoint=isEdit?URL+"/rest/v1/songs?id=eq."+encodeURIComponent(editingId):URL+"/rest/v1/songs";
+  const r=await fetch(endpoint,{
+   method:isEdit?"PATCH":"POST",
+   headers:{
+    apikey:KEY,Authorization:"Bearer "+s.access_token,"Content-Type":"application/json",
+    ...(isEdit?{}:{Prefer:"return=representation"})
+   },
+   body:JSON.stringify(row)
+  });
+  if(!r.ok){const t=await r.text();throw Error((isEdit?"수정":"저장")+" 실패 ("+r.status+"): "+t)}
+  cancelEdit();
+  out.textContent=isEdit?"✅ 수정 완료!":"✅ 저장 완료!";
+  out.style.color="#176a38";
+  await loadSongs(s);
+ }catch(err){out.textContent=err.message;out.style.color="#a52a2a"}
+ finally{btn.disabled=false}
+};
+
+$("#logout").onclick=()=>{clearSession();cancelEdit();showLogin()};
+
+(async()=>{
+ let s=loadSession();
+ if(!s)return showLogin();
+ if((s.expires_at||0)*1000<=Date.now()+30000&&s.refresh_token){
+  try{
+   const r=await fetch(URL+"/auth/v1/token?grant_type=refresh_token",{method:"POST",headers:{apikey:KEY,"Content-Type":"application/json"},body:JSON.stringify({refresh_token:s.refresh_token})});
+   if(r.ok){s=await r.json();saveSession(s)}else{s=null}
+  }catch{s=null}
+ }
+ if(s)await showApp(s);else{clearSession();showLogin()}
+})();
+</script></body></html>
