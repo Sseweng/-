@@ -20,6 +20,23 @@ button{width:100%;margin-top:18px;padding:14px;border:0;border-radius:13px;backg
 <button id="btn">로그인</button></form><div id="msg"></div></section>
 
 <section id="app"><div class="top"><div><h1>🎵 내 도전곡</h1><p id="who" style="margin:4px 0 0"></p></div><button id="logout">로그아웃</button></div>
+<div style="margin-top:22px;padding-top:20px;border-top:1px solid #e8eaf0">
+<h2 style="font-size:19px;margin:0 0 12px">새 도전곡 추가</h2>
+<form id="songForm">
+<label>곡 제목</label><input id="songTitle" required placeholder="예: 겁쟁이">
+<label>가수</label><input id="songArtist" required placeholder="예: 버즈">
+<label>상태</label>
+<select id="songStatus" style="width:100%;padding:14px;border:1px solid #d9dde7;border-radius:13px;font-size:16px;background:white">
+<option value="good">🟢 자신 있음</option>
+<option value="maybe">🟡 애매함</option>
+<option value="ban">🔴 금지곡</option>
+</select>
+<label>메모</label><input id="songMemo" placeholder="선택사항">
+<button id="saveSongBtn" type="submit">곡 저장하기</button>
+</form>
+<div id="saveMsg" style="margin-top:12px"></div>
+</div>
+<h2 style="font-size:19px;margin:25px 0 8px">저장된 곡</h2>
 <div id="songs"><p>불러오는 중...</p></div></section>
 </div></div>
 <script>
@@ -31,7 +48,7 @@ const saveSession=s=>localStorage.setItem("honkono_session",JSON.stringify(s));
 const clearSession=()=>localStorage.removeItem("honkono_session");
 
 function showLogin(){ $("#app").style.display="none";$("#login").style.display="block" }
-async function showApp(s){ $("#login").style.display="none";$("#app").style.display="block";$("#who").textContent=s.user?.email||""; await loadSongs(s) }
+async function showApp(s){ $("#login").style.display="none";$("#app").style.display="block";$("#who").textContent="쓰웽이"; await loadSongs(s) }
 
 async function loadSongs(s){
  const box=$("#songs"); box.innerHTML="<p>Supabase에서 불러오는 중...</p>";
@@ -63,6 +80,41 @@ $("#form").onsubmit=async e=>{
   const d=await r.json();if(!r.ok)throw Error(d.msg||d.message||"로그인 실패");
   saveSession(d);$("#form").reset();await showApp(d);
  }catch(e){$("#msg").textContent=e.message}finally{$("#btn").disabled=false;$("#btn").textContent="로그인"}
+};
+
+$("#songForm").onsubmit=async e=>{
+ e.preventDefault();
+ const s=loadSession();
+ const out=$("#saveMsg");
+ out.textContent="저장 중...";
+ out.style.color="#687083";
+ try{
+  if(!s?.access_token) throw Error("로그인이 필요합니다.");
+  const row={
+   title:$("#songTitle").value.trim(),
+   artist:$("#songArtist").value.trim(),
+   status:$("#songStatus").value,
+   memo:$("#songMemo").value.trim()
+  };
+  const r=await fetch(URL+"/rest/v1/songs",{
+   method:"POST",
+   headers:{
+    apikey:KEY,
+    Authorization:"Bearer "+s.access_token,
+    "Content-Type":"application/json",
+    Prefer:"return=representation"
+   },
+   body:JSON.stringify(row)
+  });
+  if(!r.ok){const t=await r.text();throw Error("저장 실패 ("+r.status+"): "+t)}
+  out.textContent="✅ 저장 완료!";
+  out.style.color="#176a38";
+  $("#songForm").reset();
+  await loadSongs(s);
+ }catch(e){
+  out.textContent=e.message;
+  out.style.color="#a52a2a";
+ }
 };
 $("#logout").onclick=()=>{clearSession();showLogin()};
 
