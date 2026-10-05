@@ -15,7 +15,7 @@ label{display:block;font-size:13px;font-weight:800;margin:14px 0 7px}
 input,select{width:100%;padding:14px;border:1px solid #d9dde7;border-radius:13px;font-size:16px;background:#fff;color:var(--ink);outline:none}
 input:focus,select:focus{border-color:#8d96a8;box-shadow:0 0 0 3px #1719230b}
 button{border:0;border-radius:13px;font-weight:800;cursor:pointer}
-#form button,#songForm>button{width:100%;margin-top:18px;padding:14px;background:var(--ink);color:#fff;font-size:16px}
+#form button,#songForm>button{width:100%;margin-top:18px;padding:17px 16px;min-height:56px;background:var(--ink);color:#fff;font-size:16px}
 #app{display:none}
 .top{display:flex;justify-content:space-between;gap:12px;align-items:center}
 .top button{padding:9px 12px;background:#eef0f5;color:#242936;font-size:13px}
@@ -24,7 +24,7 @@ button{border:0;border-radius:13px;font-weight:800;cursor:pointer}
 .editor-head h2{font-size:19px;margin:0}
 .editing-badge{display:none;padding:6px 9px;border-radius:999px;background:#fff3d7;color:#855d00;font-size:12px;font-weight:900}
 .form-actions{display:flex;gap:8px}
-.form-actions button{flex:1}
+.form-actions button{flex:1;min-height:56px;padding:16px 14px!important}
 #cancelEdit{display:none;background:#eef0f5!important;color:#242936!important}
 #saveMsg{margin-top:12px;min-height:22px}
 .list-head{display:flex;justify-content:space-between;align-items:end;gap:12px;margin-top:28px}
@@ -53,7 +53,7 @@ button{border:0;border-radius:13px;font-weight:800;cursor:pointer}
 @media(max-width:520px){
  body{padding:10px}.wrap{margin:10px auto 36px}.card{padding:20px;border-radius:22px}
  h1{font-size:25px}.song-main{display:block}.status{margin-top:10px}
- .tab{font-size:11px;padding:10px 2px}.search-wrap{top:0}
+ .form-actions{gap:10px}.form-actions button{min-height:60px;font-size:16px}.tab{font-size:11px;padding:10px 2px}.search-wrap{top:0}
 }
 </style>
 </head>
